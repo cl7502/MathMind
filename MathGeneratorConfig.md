@@ -36,6 +36,7 @@ interface AppSettings {
     denom1Digit: boolean;                   // 分母允许个位整数 (1-9，通常不为1)
     denom2Digit: boolean;                   // 分母允许十位整数 (10-99)
     allowZeroNum: boolean;                  // 特殊情况：是否允许分子为 0 
+    allowNegativeResult: boolean;           // 是否允许计算中间过程或最终结果出现负数
 }
 ```
 

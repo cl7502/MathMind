@@ -31,6 +31,7 @@ export interface AppSettings {
     denom1Digit: boolean;
     denom2Digit: boolean;
     allowZeroNum: boolean;
+    allowNegativeResult: boolean;
 }
 
 const randomInt = (min: number, max: number) => {
@@ -83,27 +84,30 @@ function generateValNode(s: AppSettings, commonDenom: number, isSameDenom: boole
     }
 }
 
-function evaluate(node: ExprNode, mode: AppSettings['mode']): Frac | null {
+function evaluate(node: ExprNode, mode: AppSettings['mode'], allowNegative: boolean = false): Frac | null {
     if (node.type === 'num') return node.val!;
-    const l = evaluate(node.left!, mode);
-    const r = evaluate(node.right!, mode);
+    const l = evaluate(node.left!, mode, allowNegative);
+    const r = evaluate(node.right!, mode, allowNegative);
     if (!l || !r) return null;
     
     try {
+        let res: Frac;
         switch (node.op) {
-            case '+': return l.add(r);
-            case '-': return l.sub(r);
-            case '×': return l.mul(r);
+            case '+': res = l.add(r); break;
+            case '-': res = l.sub(r); break;
+            case '×': res = l.mul(r); break;
             case '÷':
                 if (r.n === 0) return null;
-                const res = l.div(r);
+                res = l.div(r);
                 if (mode === 'integer' && !res.isInteger()) return null; // Must divide evenly in int mode
-                return res;
+                break;
+            default: return null;
         }
+        if (!allowNegative && res.isNegative()) return null;
+        return res;
     } catch { 
         return null; 
     }
-    return null;
 }
 
 function randomAST(opCount: number, s: AppSettings, commonDenom: number, isSameDenom: boolean): ExprNode {
@@ -172,10 +176,10 @@ export function generateSingleProblem(s: AppSettings): { ast: ExprNode, ans: Fra
     // More retries to increase success rate for constrained parameters
     for (let i = 0; i < 500; i++) {
         const ast = randomAST(tempS.opCount, tempS, commonDenom, isSameDenom);
-        const ans = evaluate(ast, tempS.mode);
+        const ans = evaluate(ast, tempS.mode, tempS.allowNegativeResult);
 
         if (!ans) continue;
-        if (ans.isNegative()) continue; // Result cannot be negative
+        if (!tempS.allowNegativeResult && ans.isNegative()) continue; // Result cannot be negative unless allowed
 
         if (tempS.mode === 'integer' || tempS.mode === 'mixed') {
             if (tempS.resultMax > 0 && ans.toNumber() > tempS.resultMax) continue;

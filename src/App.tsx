@@ -11,12 +11,12 @@ import { MathNode } from './components/MathNode';
 
 export default function App() {
     const [settings, setSettings] = useState<AppSettings>({
-        mode: 'fraction',
+        mode: 'integer',
         count: 50,
         columns: 3,
         opCount: 3,
         hasParens: true,
-        ops: ['+', '-', '×', '÷'],
+        ops: ['+', '-'],
         num1Digit: true,
         num2Digit: true,
         resultMax: 100,
@@ -30,12 +30,14 @@ export default function App() {
         denom1Digit: true,
         denom2Digit: true,
         allowZeroNum: false,
+        allowNegativeResult: false,
     });
 
     const [problems, setProblems] = useState<{ ast: ExprNode, ans: Frac }[]>([]);
     const [isGenerating, setIsGenerating] = useState(false);
     const [errorMsg, setErrorMsg] = useState('');
     const [printMode, setPrintMode] = useState<'none' | 'questions' | 'answers'>('none');
+    const [showPrintTitle, setShowPrintTitle] = useState(true);
 
     const handleOpChange = (op: Op) => {
         setSettings(s => ({
@@ -101,19 +103,23 @@ export default function App() {
         
         return (
             <div className="bg-white text-black min-h-screen p-8 text-xl font-serif">
-                <div className="text-center mb-8">
-                    <h1 className="text-4xl font-bold font-sans tracking-widest">口算{title} {typeLabel}</h1>
-                </div>
-                
-                <div className="flex justify-between items-end border-b-2 border-black pb-2 mb-6 text-2xl font-sans">
-                    <div className="w-1/4">姓名：<span className="inline-block w-32 border-b border-black"></span></div>
-                    <div className="w-1/4">日期：<span className="inline-block w-32 border-b border-black"></span></div>
-                    <div className="w-1/4 "><span className="ml-[10%]">用时：</span><span className="inline-block w-28 border-b border-black"></span></div>
-                    <div className="w-1/4 text-right">得分：<span className="inline-block w-24 border-b border-black"></span></div>
-                </div>
+                {showPrintTitle && (
+                    <>
+                        <div className="text-center mb-8">
+                            <h1 className="text-4xl font-bold font-sans tracking-widest">口算{title} {typeLabel}</h1>
+                        </div>
+                        
+                        <div className="flex justify-between items-end border-b-2 border-black pb-2 mb-6 text-2xl font-sans">
+                            <div className="w-1/4">姓名：<span className="inline-block w-32 border-b border-black"></span></div>
+                            <div className="w-1/4">日期：<span className="inline-block w-32 border-b border-black"></span></div>
+                            <div className="w-1/4 "><span className="ml-[10%]">用时：</span><span className="inline-block w-28 border-b border-black"></span></div>
+                            <div className="w-1/4 text-right">得分：<span className="inline-block w-24 border-b border-black"></span></div>
+                        </div>
+                    </>
+                )}
 
                 <div 
-                    className="grid gap-y-12 gap-x-8 mt-12"
+                    className={`grid gap-y-12 gap-x-8 ${showPrintTitle ? 'mt-12' : 'mt-4'}`}
                     style={{ gridTemplateColumns: `repeat(${settings.columns}, minmax(0, 1fr))` }}
                 >
                     {problems.map((p, i) => (
@@ -210,40 +216,52 @@ export default function App() {
                         </div>
 
                         {/* Row 4: Num Range */}
-                        <div className="md:col-span-12 flex flex-wrap items-center gap-x-8 gap-y-3 mt-1">
-                            <div className="flex items-center space-x-4">
-                                <span className="font-medium min-w-[80px]">数字范围：</span>
-                                <label className="flex items-center space-x-1 cursor-pointer">
-                                    <input type="checkbox" checked={settings.num1Digit}
-                                        onChange={e => setSettings({...settings, num1Digit: e.target.checked})}
-                                        className="w-4 h-4 text-blue-600 rounded" />
-                                    <span>个位整数</span>
-                                </label>
-                                <label className="flex items-center space-x-1 cursor-pointer">
-                                    <input type="checkbox" checked={settings.num2Digit}
-                                        onChange={e => setSettings({...settings, num2Digit: e.target.checked})}
-                                        className="w-4 h-4 text-blue-600 rounded" />
-                                    <span>十位整数</span>
-                                </label>
+                        <div className="md:col-span-12 flex flex-col gap-y-3 mt-1">
+                            <div className="flex flex-wrap items-center gap-x-8 gap-y-3">
+                                <div className="flex items-center space-x-4">
+                                    <span className="font-medium min-w-[80px]">数字范围：</span>
+                                    <label className="flex items-center space-x-1 cursor-pointer">
+                                        <input type="checkbox" checked={settings.num1Digit}
+                                            onChange={e => setSettings({...settings, num1Digit: e.target.checked})}
+                                            className="w-4 h-4 text-blue-600 rounded" />
+                                        <span>个位整数</span>
+                                    </label>
+                                    <label className="flex items-center space-x-1 cursor-pointer">
+                                        <input type="checkbox" checked={settings.num2Digit}
+                                            onChange={e => setSettings({...settings, num2Digit: e.target.checked})}
+                                            className="w-4 h-4 text-blue-600 rounded" />
+                                        <span>十位整数</span>
+                                    </label>
+                                </div>
+                                
+                                <div className={`flex items-center space-x-2 ml-4 ${settings.mode === 'fraction' ? 'opacity-50 pointer-events-none' : ''}`}>
+                                    <span className="font-medium border-l border-neutral-300 pl-4">结果范围：</span>
+                                    <div className="flex items-center space-x-1">
+                                        <input 
+                                            type="number" 
+                                            min="1"
+                                            list="result-max-options"
+                                            value={settings.resultMax || ''}
+                                            onChange={e => setSettings({...settings, resultMax: Number(e.target.value)})}
+                                            className="w-20 border rounded px-1 outline-none focus:ring-1 focus:ring-blue-500 text-center"
+                                        />
+                                        <datalist id="result-max-options">
+                                            <option value="50" />
+                                            <option value="100" />
+                                        </datalist>
+                                        <span>以内 (含)</span>
+                                    </div>
+                                </div>
                             </div>
                             
-                            <div className={`flex items-center space-x-2 ml-4 ${settings.mode === 'fraction' ? 'opacity-50 pointer-events-none' : ''}`}>
-                                <span className="font-medium border-l border-neutral-300 pl-4">结果范围：</span>
-                                <div className="flex items-center space-x-1">
-                                    <input 
-                                        type="number" 
-                                        min="1"
-                                        list="result-max-options"
-                                        value={settings.resultMax || ''}
-                                        onChange={e => setSettings({...settings, resultMax: Number(e.target.value)})}
-                                        className="w-20 border rounded px-1 outline-none focus:ring-1 focus:ring-blue-500 text-center"
-                                    />
-                                    <datalist id="result-max-options">
-                                        <option value="50" />
-                                        <option value="100" />
-                                    </datalist>
-                                    <span>以内 (含)</span>
-                                </div>
+                            <div className="flex items-center space-x-4">
+                                <span className="min-w-[80px]"></span>
+                                <label className="flex items-center space-x-1 cursor-pointer">
+                                    <input type="checkbox" checked={settings.allowNegativeResult}
+                                        onChange={e => setSettings({...settings, allowNegativeResult: e.target.checked})}
+                                        className="w-4 h-4 text-blue-600 rounded" />
+                                    <span>允许负数结果</span>
+                                </label>
                             </div>
                         </div>
 
@@ -364,6 +382,12 @@ export default function App() {
                     </button>
 
                     <div className="flex items-center space-x-3">
+                        <label className="flex items-center space-x-1 cursor-pointer mr-2 border-r border-neutral-300 pr-4">
+                            <input type="checkbox" checked={showPrintTitle}
+                                onChange={e => setShowPrintTitle(e.target.checked)}
+                                className="w-4 h-4 text-blue-600 rounded" />
+                            <span className="text-sm font-medium text-neutral-600">显示标题</span>
+                        </label>
                         <span className="text-sm text-neutral-500 mr-2">打印输出:</span>
                         <button 
                             onClick={() => handlePrint('questions')}
